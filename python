@@ -1,0 +1,133 @@
+#code
+
+
+import pygame
+import random
+
+# الألوان
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+
+# أبعاد الشاشة والخلايا
+CELL_SIZE = 20
+WIDTH = 600
+HEIGHT = 480
+
+# تعريف فئة الثعبان
+class Snake:
+    def __init__(self):
+        self.body = [(10, 10), (9, 10), (8, 10)]  # قائمة بإحداثيات أجزاء الثعبان (الرأس أولاً)
+        self.direction = (1, 0)  # الاتجاه الأولي (يمينًا)
+        self.color = GREEN
+
+    def move(self):
+        head = self.body[0]
+        new_head = (head[0] + self.direction[0], head[1] + self.direction[1])
+        self.body.insert(0, new_head)  # إضافة رأس جديد في البداية
+        self.body.pop()  # إزالة آخر جزء من الذيل
+
+    def grow(self):
+        head = self.body[0]
+        new_head = (head[0] + self.direction[0], head[1] + self.direction[1])
+        self.body.insert(0, new_head)  # إضافة رأس جديد (دون إزالة الذيل)
+
+    def change_direction(self, new_direction):
+        # منع الحركة العكسية مباشرة
+        if (new_direction[0] * -1, new_direction[1] * -1) == self.direction:
+            return
+        else:
+            self.direction = new_direction
+
+    def draw(self, screen):
+        for segment in self.body:
+            rect = pygame.Rect(segment[0] * CELL_SIZE, segment[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+            pygame.draw.rect(screen, self.color, rect)
+
+    def check_collision(self):
+        head = self.body[0]
+        # الاصطدام بالجدار
+        if not (0 <= head[0] < WIDTH / CELL_SIZE and 0 <= head[1] < HEIGHT / CELL_SIZE):
+            return True
+        # الاصطدام بالذيل
+        if head in self.body[1:]:
+            return True
+        return False
+
+# تعريف فئة الفاكهة
+class Fruit:
+    def __init__(self):
+        self.x = random.randint(0, (WIDTH // CELL_SIZE) - 1)
+        self.y = random.randint(0, (HEIGHT // CELL_SIZE) - 1)
+        self.color = RED
+
+    def draw(self, screen):
+        rect = pygame.Rect(self.x * CELL_SIZE, self.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        pygame.draw.rect(screen, self.color, rect)
+
+    def randomize_position(self, snake):
+        while True:
+            self.x = random.randint(0, (WIDTH // CELL_SIZE) - 1)
+            self.y = random.randint(0, (HEIGHT // CELL_SIZE) - 1)
+            if (self.x, self.y) not in snake.body:  # التأكد من عدم وجود الفاكهة داخل الثعبان
+                break
+
+# تهيئة Pygame
+pygame.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Snake Game")
+clock = pygame.time.Clock()
+
+# إنشاء كائنات اللعبة
+snake = Snake()
+fruit = Fruit()
+
+# متغيرات اللعبة
+game_over = False
+score = 0
+
+# الحلقة الرئيسية للعبة
+while not game_over:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            game_over = True
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                snake.change_direction((0, -1))
+            elif event.key == pygame.K_DOWN:
+                snake.change_direction((0, 1))
+            elif event.key == pygame.K_LEFT:
+                snake.change_direction((-1, 0))
+            elif event.key == pygame.K_RIGHT:
+                snake.change_direction((1, 0))
+
+    # تحريك الثعبان
+    snake.move()
+
+    # التحقق من الاصطدام بالفاكهة
+    if snake.body[0] == (fruit.x, fruit.y):
+        snake.grow()
+        fruit.randomize_position(snake)  # توليد مكان جديد للفاكهة
+        score += 10
+
+    # التحقق من الاصطدام
+    if snake.check_collision():
+        game_over = True
+
+    # الرسم
+    screen.fill(BLACK)  # مسح الشاشة
+    snake.draw(screen)
+    fruit.draw(screen)
+
+    # عرض النتيجة
+    font = pygame.font.Font(None, 36)
+    text = font.render(f"Score: {score}", True, WHITE)
+    screen.blit(text, (5, 5))
+
+    # تحديث الشاشة
+    pygame.display.flip()
+    clock.tick(15)  # تحديد سرعة اللعبة (إطارات في الثانية)
+
+# إنهاء Pygame
+pygame.quit()
